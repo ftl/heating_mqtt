@@ -1,6 +1,8 @@
 #!/usr/bin/python
+import sys
 import serial
 import argparse
+import datetime
 import paho.mqtt.publish as mqtt
 
 # command line arguments
@@ -10,18 +12,24 @@ read sensor data from an AlphaInnotec heating on a serial port and publish the s
 commandline.add_argument('--serial_port', '-p', default='/dev/ttyUSB0', help='the serial port to communicate with the heating controller')
 commandline.add_argument('--mqtt_broker', '-b', default='localhost', help='the MQTT broker to publish the sensor data to')
 commandline.add_argument('--verbose', '-v', action='store_true', help='verbose output (use only for debugging)')
+commandline.add_argument('--trace', '-t', action='store_true', help='trace communication to standard out')
 arguments = commandline.parse_args()
 
 # config
 PORTNAME = arguments.serial_port
 MQTT_BROKER = arguments.mqtt_broker
 VERBOSE = arguments.verbose
+TRACE = arguments.trace
 
 BUSY = 'Busy'
 
 def verbose(text):
   if not VERBOSE: return
   print text
+
+def trace(text):
+  if not TRACE: return
+  sys.stdout.write(text)
 
 # serial communication
 def request_datarow(serial_port, row_id):
@@ -33,10 +41,10 @@ def request_datarow(serial_port, row_id):
 
   def handle_echo(fields):
     content = fields[0]
-    if (len(content) == 0): 
+    if (len(content) == 0):
       verbose('<waiting/>')
       return None
-    elif (content == '777'): 
+    elif (content == '777'):
       return BUSY
     else:
       verbose('<echo>' + content + '</echo>')
@@ -65,6 +73,7 @@ def request_datarow(serial_port, row_id):
     while (True):
       c = serial_port.read(1)
       if len(c) == 0: continue
+      trace(c)
       if c == '\n': continue
       if c == '\r': return line
       line += c
@@ -76,7 +85,7 @@ def request_datarow(serial_port, row_id):
 
   return datarow
 
-# dataset handling  
+# dataset handling
 def temp(s): return str(int(s) / 10.0)
 
 def mode(m):
@@ -87,7 +96,7 @@ def mode(m):
 def handle_1100(fields):
   if (fields == BUSY): return
   publish_temperatures(
-    heating_feed=temp(fields[2]), 
+    heating_feed=temp(fields[2]),
     heating_return=temp(fields[3]),
     heating_return_target=temp(fields[4]),
     outside_temp=temp(fields[6]),
@@ -123,6 +132,8 @@ def publish_mode(mode):
 
 ### MAIN PROGRAM
 
+trace(str(datetime.datetime.now()) + '\r\n')
+
 serial_port = serial.Serial(port=PORTNAME, baudrate=57600, xonxoff=True, timeout=1)
 
 temperature_fields = request_datarow(serial_port, '1100')
@@ -132,3 +143,5 @@ serial_port.close()
 
 handle_1100(temperature_fields)
 handle_1700(mode_fields)
+
+trace('\r\n')
