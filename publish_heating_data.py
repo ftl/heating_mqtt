@@ -130,18 +130,45 @@ def publish_temperatures(outside_temp, heating_feed, heating_return, heating_ret
 def publish_mode(mode):
   mqtt.single(hostname=MQTT_BROKER, topic='house/heating/mode', payload=mode, retain=True)
 
+def open_serial_port():
+  if (PORTNAME == 'auto'):
+    serial_port = try_serial_port('/dev/ttyUSB0')
+    if (serial_port == None): serial_port = try_serial_port('/dev/ttyUSB1')
+    return serial_port
+  else:
+    return try_serial_port(PORTNAME)
+
+def try_serial_port(port_name):
+  try:
+    serial_port = serial.Serial(port=port_name, baudrate=57600, xonxoff=True, timeout=1)
+    verbose('<serialPort>' + port_name + '</serialPort>')
+    return serial_port
+  except:
+    return None
+
 ### MAIN PROGRAM
 
 trace(str(datetime.datetime.now()) + '\r\n')
 
-serial_port = serial.Serial(port=PORTNAME, baudrate=57600, xonxoff=True, timeout=1)
+try:
+  serial_port = open_serial_port()
+  if (serial_port == None):
+    trace('Cannot open serial port ' + PORTNAME + '.')
+    trace('\r\n')
+    sys.exit(0)
 
-temperature_fields = request_datarow(serial_port, '1100')
-mode_fields = request_datarow(serial_port, '1700')
+  temperature_fields = request_datarow(serial_port, '1100')
+  mode_fields = request_datarow(serial_port, '1700')
 
-serial_port.close()
+  serial_port.close()
+except:
+  e = sys.exc_info()[0]
+  trace(str(e))
+  trace('\r\n')
+  sys.exit(0)
 
 handle_1100(temperature_fields)
 handle_1700(mode_fields)
 
+trace('finished')
 trace('\r\n')
