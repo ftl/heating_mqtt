@@ -12,7 +12,7 @@ read sensor data from an AlphaInnotec heating on a serial port and publish the s
 commandline.add_argument('--serial_port', '-p', default='/dev/ttyUSB0', help='the serial port to communicate with the heating controller')
 commandline.add_argument('--mqtt_broker', '-b', default='localhost', help='the MQTT broker to publish the sensor data to')
 commandline.add_argument('--username', '-u', default=None, help='the MQTT user')
-commandline.add_argument('--pasword', '-P', default=None, help='the MQTT password')
+commandline.add_argument('--password', '-P', default=None, help='the MQTT password')
 commandline.add_argument('--verbose', '-v', action='store_true', help='verbose output (use only for debugging)')
 commandline.add_argument('--trace', '-t', action='store_true', help='trace communication to standard out')
 arguments = commandline.parse_args()
