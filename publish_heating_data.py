@@ -11,6 +11,8 @@ read sensor data from an AlphaInnotec heating on a serial port and publish the s
 ''')
 commandline.add_argument('--serial_port', '-p', default='/dev/ttyUSB0', help='the serial port to communicate with the heating controller')
 commandline.add_argument('--mqtt_broker', '-b', default='localhost', help='the MQTT broker to publish the sensor data to')
+commandline.add_argument('--username', '-u', default=None, help='the MQTT user')
+commandline.add_argument('--pasword', '-P', default=None, help='the MQTT password')
 commandline.add_argument('--verbose', '-v', action='store_true', help='verbose output (use only for debugging)')
 commandline.add_argument('--trace', '-t', action='store_true', help='trace communication to standard out')
 arguments = commandline.parse_args()
@@ -18,6 +20,9 @@ arguments = commandline.parse_args()
 # config
 PORTNAME = arguments.serial_port
 MQTT_BROKER = arguments.mqtt_broker
+MQTT_AUTH = None
+if arguments.username and arguments.password:
+    MQTT_AUTH = {'username': arguments.username, 'password': arguments.password}
 VERBOSE = arguments.verbose
 TRACE = arguments.trace
 
@@ -114,7 +119,7 @@ def handle_1700(fields):
 
 # MQTT publishing
 def publish_temperatures(outside_temp, heating_feed, heating_return, heating_return_target, source_feed, source_return, water_temp, water_target):
-  mqtt.multiple(hostname=MQTT_BROKER,
+  mqtt.multiple(hostname=MQTT_BROKER, auth=MQTT_AUTH,
     msgs = [
       ('outside/temperature', outside_temp, 0, True),
       ('house/heating/floor/feed', heating_feed, 0, True),
@@ -128,7 +133,7 @@ def publish_temperatures(outside_temp, heating_feed, heating_return, heating_ret
   )
 
 def publish_mode(mode):
-  mqtt.single(hostname=MQTT_BROKER, topic='house/heating/mode', payload=mode, retain=True)
+  mqtt.single(hostname=MQTT_BROKER, auth=MQTT_AUTH, topic='house/heating/mode', payload=mode, retain=True)
 
 def open_serial_port():
   if (PORTNAME == 'auto'):
