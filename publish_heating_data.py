@@ -124,6 +124,9 @@ def handle_1700(fields):
   verbose('<mode>' + fields[5] + '</mode>')
 
 # MQTT publishing
+def publish_health(ok):
+  mqtt.single(hostname=MQTT_BROKER, auth=MQTT_AUTH, topic='health/heating', payload=ok, retain=True)
+
 def publish_temperatures(outside_temp, heating_feed, heating_return, heating_return_target, source_feed, source_return, water_temp, water_target):
   mqtt.multiple(hostname=MQTT_BROKER, auth=MQTT_AUTH,
     msgs = [
@@ -166,10 +169,12 @@ trace(str(datetime.datetime.now()) + '\r\n')
 
 try:
   try:
+    publish_health(True)
     serial_port = open_serial_port()
     if (serial_port == None):
       trace('Cannot open serial port ' + PORTNAME + '.')
       trace('\r\n')
+      publish_health(False)
       sys.exit(0)
 
     serial_port.reset_input_buffer()
@@ -183,6 +188,7 @@ except:
   e = sys.exc_info()[0]
   trace(str(e))
   trace('\r\n')
+  publish_health(False)
   sys.exit(0)
 
 handle_1100(temperature_fields)
