@@ -73,6 +73,12 @@ def request_datarow(serial_port, row_id):
       return None
     return fields
 
+  def clear_buffer():
+    while serial_port.in_waiting:
+      c = serial_port.read(1)
+      if len(c) == 0: continue
+      trace(c)
+
   def readline():
     line = ''
     while (True):
@@ -145,10 +151,13 @@ def open_serial_port():
 
 def try_serial_port(port_name):
   try:
-    serial_port = serial.Serial(port=port_name, baudrate=57600, xonxoff=True, timeout=1)
+    serial_port = serial.Serial(port=port_name, baudrate=57600, xonxoff=True, timeout=1, exclusive=True)
     verbose('<serialPort>' + port_name + '</serialPort>')
     return serial_port
   except:
+    e = sys.exc_info()[0]
+    trace(str(e))
+    trace('\r\n')
     return None
 
 ### MAIN PROGRAM
@@ -156,16 +165,20 @@ def try_serial_port(port_name):
 trace(str(datetime.datetime.now()) + '\r\n')
 
 try:
-  serial_port = open_serial_port()
-  if (serial_port == None):
-    trace('Cannot open serial port ' + PORTNAME + '.')
-    trace('\r\n')
-    sys.exit(0)
+  try:
+    serial_port = open_serial_port()
+    if (serial_port == None):
+      trace('Cannot open serial port ' + PORTNAME + '.')
+      trace('\r\n')
+      sys.exit(0)
 
-  temperature_fields = request_datarow(serial_port, '1100')
-  mode_fields = request_datarow(serial_port, '1700')
+    serial_port.reset_input_buffer()
+    serial_port.reset_output_buffer()
+    temperature_fields = request_datarow(serial_port, '1100')
+    mode_fields = request_datarow(serial_port, '1700')
+  finally:
+    serial_port.close()
 
-  serial_port.close()
 except:
   e = sys.exc_info()[0]
   trace(str(e))
